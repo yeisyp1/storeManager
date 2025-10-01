@@ -18,7 +18,8 @@ const crearProducto = async (req, res) => {
     const {nombre, descripcion, precioUnitario, stock} = req.body;
     try 
     {
-        const nuevoProducto = await prisma.producto.create({
+        const nuevoProducto = await prisma.producto.create(
+        {
             data: 
             {nombre, descripcion, precioUnitario, stock}
         });
@@ -31,4 +32,23 @@ const crearProducto = async (req, res) => {
     }
 };
 
-module.exports = {getProductos, crearProducto};
+const actualizarProducto = async (req, res) => {
+    const {id} = req.params;
+    const {nombre, descripcion, precioUnitario, stock} = req.body;
+    const producto = await prisma.producto.update(
+    {
+        where: {id: parseInt(id)},
+        data: {nombre, descripcion, precioUnitario, stock}
+    });
+    res.json(producto);
+};
+
+const eliminarProducto = async (req, res) => {
+    const {id} = req.params;
+    await prisma.producto.delete({where: {id: parseInt(id)}});
+    res.json({message: 'Producto eliminado'});
+};
+
+
+
+module.exports = {getProductos, crearProducto, actualizarProducto, eliminarProducto};

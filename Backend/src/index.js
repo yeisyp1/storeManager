@@ -4,13 +4,18 @@ const port = 3000;
 
 app.use(express.json());
 
-// Rutas
 const usuarioR = require('./routes/usuarioR');
 const productoR = require('./routes/productoR');
+const authR = require('./routes/authR');
+const reportesR = require('./routes/reportesR');
+const cajaR = require('./routes/cajaR');
 
-app.use('/usuarios', usuarioR);
-app.use('/productos', productoR);
+app.use('/api/usuarios', usuarioR);
+app.use('/api/productos', productoR);
+app.use('/api/auth', authR);
+app.use('/api/reportes', reportesR);    // ← Ahora con /api
+app.use('/api/caja', cajaR);
 
 app.listen(port, () => {
-  console.log(`Servidor corriendo en http://localhost:${port}`);
+    console.log(`Servidor corriendo en http://localhost:${port}`);
 });
