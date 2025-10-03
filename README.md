@@ -37,11 +37,12 @@ StoreManager es un sistema de gestión de inventario y ventas diseñado para neg
     Instalar dependencias: 
     npm install 
 
-    Crear y configurar en la raíz del Backend el archivo .env con el siguiente contenido: 
+    Crear y configurar en la raíz del Backend el archivo .env con el siguiente contenido:
+    DATABASE_URL="postgresql://usuario:contraseña@localhost:5432/storeManager"
+    JWT_SECRET="ContraseñaSecretaJWT" 
+    JWT_REFRESH_SECRET="ContraseñaRefreshSegura" 
 
-DATABASE_URL="postgresql://usuario:contraseña@localhost:5432/storeManager" 
-JWT_SECRET="ContraseñaSecretaJWT" 
-JWT_REFRESH_SECRET="ContraseñaRefreshSegura" 
+
 
     Ejecutar migraciones e ingresar datos iniciales: 
     npx prisma migrate dev --name init 
