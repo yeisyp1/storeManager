@@ -2,19 +2,34 @@ const PDFDocument = require('pdfkit');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const obtenerRangoFechaUTC = (fechaLocal) => {
+    if (!fechaLocal) {
+
+        const ahora = new Date();
+        const fechaColombia = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+        const year = fechaColombia.getFullYear();
+        const month = String(fechaColombia.getMonth() + 1).padStart(2, '0');
+        const day = String(fechaColombia.getDate()).padStart(2, '0');
+        fechaLocal = `${year}-${month}-${day}`;
+    }
+
+    const fechaInicio = new Date(`${fechaLocal}T00:00:00.000-05:00`);
+    const fechaFin = new Date(`${fechaLocal}T23:59:59.999-05:00`);
+    
+    return { fechaInicio, fechaFin, fechaLocal };
+};
+
 const ventasDiarias = async (req, res) => {
     try {
-
-        const hoy = new Date();
-        const fechaHoy = hoy.toISOString().split('T')[0]; 
-        const fechaInicio = new Date(fechaHoy + 'T00:00:00.000Z');
-        const fechaFin = new Date(fechaHoy + 'T23:59:59.999Z');
+        const { fecha } = req.query;
+        
+        const { fechaInicio, fechaFin, fechaLocal } = obtenerRangoFechaUTC(fecha);
 
         const ventas = await prisma.venta.findMany({
             where: {
                 fecha: {
-                    gte: fechaInicio,      
-                    lte: fechaFin    
+                    gte: fechaInicio,
+                    lte: fechaFin
                 }
             },
             include: {
@@ -22,55 +37,72 @@ const ventasDiarias = async (req, res) => {
                     include: {
                         producto: true
                     }
-                }
+                },
+                usuario: true
+            },
+            orderBy: {
+                fecha: 'desc'
             }
         });
 
-       const totalVenta = venta.total ? parseFloat(venta.total.toString()) : 0;
-       doc.fontSize(11).fillColor('#000')
-       .text(`   TOTAL: $${totalVenta.toLocaleString('es-CO')}`, { align: 'right' });
+        if (ventas.length > 0) {
+            console.log('Primera venta:', ventas[0].fecha);
+        }
 
-       const ingresoTotal = ventas.reduce((sum, venta) => sum + (venta.total ? parseFloat(venta.total.toString()) : 0), 0);
+        const totalVentas = ventas.length;
+        const ingresoTotal = ventas.reduce((sum, venta) => {
+            return sum + (venta.total ? parseFloat(venta.total.toString()) : 0);
+        }, 0);
 
-
+        const productosVendidos = {};
+        ventas.forEach(venta => {
+            venta.detalles.forEach(detalle => {
+                const productoId = detalle.productoId;
+                const nombreProducto = detalle.producto?.nombre || 'Desconocido';
+                
+                if (!productosVendidos[productoId]) {
+                    productosVendidos[productoId] = {
+                        nombre: nombreProducto,
+                        cantidad: 0,
+                        ingresos: 0
+                    };
+                }
+                
+                productosVendidos[productoId].cantidad += detalle.cantidad;
+                productosVendidos[productoId].ingresos += parseFloat(detalle.subtotal.toString());
+            });
+        });
 
         res.status(200).json({
-            fecha: fechaHoy,
+            fecha: fechaLocal,
             totalVentas,
-            ingresoTotal: ingresoTotal.toFixed(2),
+            ingresoTotal: parseFloat(ingresoTotal.toFixed(2)),
+            productosVendidos: Object.values(productosVendidos),
             ventas
         });
 
     } catch (error) {
-        console.error('Error al obtener ventas diarias:', error);
-     
+        res.status(500).json({ error: 'Error al obtener ventas diarias' });
     }
 };
 
 const exportarPdf = async (req, res) => {
     try {
-        const { fecha } = req.query; 
+        const { fecha } = req.query;
 
-        let whereClause = {};
-        
-        if (fecha) {
-            const fechaInicio = new Date(fecha + 'T00:00:00.000Z');
-            const fechaFin = new Date(fecha + 'T23:59:59.999Z');
-            
-            whereClause = {
+        const { fechaInicio, fechaFin, fechaLocal } = obtenerRangoFechaUTC(fecha);
+
+        const ventas = await prisma.venta.findMany({
+            where: {
                 fecha: {
                     gte: fechaInicio,
                     lte: fechaFin
                 }
-            };
-        }
-
-        const ventas = await prisma.venta.findMany({
-            where: whereClause,
+            },
             include: {
                 detalles: {
                     include: {
-                        producto: true 
+                        producto: true
                     }
                 },
                 usuario: true
@@ -82,9 +114,29 @@ const exportarPdf = async (req, res) => {
 
         if (ventas.length === 0) {
             return res.status(404).json({ 
-                error: 'No hay ventas para el período seleccionado'
+                error: 'No hay ventas para el rango seleccionado'
             });
         }
+
+        const totalVentas = ventas.length;
+        const ingresoTotal = ventas.reduce((sum, v) => sum + parseFloat(v.total.toString()), 0);
+        
+        const productosVendidos = {};
+        ventas.forEach(venta => {
+            venta.detalles.forEach(detalle => {
+                const productoId = detalle.productoId;
+                const nombreProducto = detalle.producto?.nombre || 'Desconocido';
+                
+                if (!productosVendidos[productoId]) {
+                    productosVendidos[productoId] = {
+                        nombre: nombreProducto,
+                        cantidad: 0
+                    };
+                }
+                
+                productosVendidos[productoId].cantidad += detalle.cantidad;
+            });
+        });
 
         const doc = new PDFDocument({ margin: 50 });
         
@@ -93,17 +145,22 @@ const exportarPdf = async (req, res) => {
         
         doc.pipe(res);
 
-        doc.fontSize(20).text('Reporte de Ventas', { align: 'center' });
+        doc.fontSize(20).fillColor('#000').text('REPORTE DE VENTAS', { align: 'center' });
         doc.moveDown();
         
-        const fechaReporte = fecha || new Date().toISOString().split('T')[0];
-        doc.fontSize(12).text(`Fecha: ${fechaReporte}`, { align: 'center' });
+        doc.fontSize(12).text(`Fecha: ${fechaLocal}`, { align: 'center' });
         doc.moveDown(2);
 
-        const totalIngresos = ventas.reduce((sum, v) => sum + parseFloat(v.total), 0);
-        doc.fontSize(14).text(`Total de Ventas: ${ventas.length}`);
-        doc.text(`Ingresos Totales: $${totalIngresos.toLocaleString('es-CO')}`);
-        doc.moveDown(2);
+        doc.fontSize(14).fillColor('#000').text('RESUMEN GENERAL', { underline: true });
+        doc.moveDown(0.5);
+        doc.fontSize(12).text(`Total de transacciones: ${totalVentas}`);
+        doc.text(`Ingresos totales: $${ingresoTotal.toLocaleString('es-CO')}`);
+        doc.moveDown(1.5);
+
+        doc.text('');
+
+        doc.fontSize(14).fillColor('#000').text('DETALLE DE VENTAS');
+        doc.moveDown(1);
 
         doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
         doc.moveDown();
@@ -122,23 +179,21 @@ const exportarPdf = async (req, res) => {
             doc.moveDown(0.5);
 
             venta.detalles.forEach((detalle) => {
-
                 const subtotal = detalle.subtotal ? parseFloat(detalle.subtotal.toString()) : 0;
                 const precioUnitario = detalle.cantidad ? subtotal / detalle.cantidad : 0;
-                
-
                 
                 doc.fontSize(10).fillColor('#333')
                    .text(`   • ${detalle.producto?.nombre || 'Producto desconocido'}`, { continued: true })
                    .text(` | Cant: ${detalle.cantidad} | $${precioUnitario.toLocaleString('es-CO')} c/u | Subtotal: $${subtotal.toLocaleString('es-CO')}`);
             });
 
+            const totalVenta = venta.total ? parseFloat(venta.total.toString()) : 0;
             doc.fontSize(11).fillColor('#000')
-               .text(`   TOTAL: $${parseFloat(venta.total.toString()).toLocaleString('es-CO')}`, { align: 'right' });
+               .text(`   TOTAL: $${totalVenta.toLocaleString('es-CO')}`, { align: 'right' });
             
             doc.moveDown(1.5);
 
-            if ((index + 1) % 10 === 0 && index < ventas.length - 1) {
+            if ((index + 1) % 8 === 0 && index < ventas.length - 1) {
                 doc.addPage();
             }
         });
@@ -150,12 +205,13 @@ const exportarPdf = async (req, res) => {
 
         doc.end();
 
-    } catch (error) {
-        console.error('Error al exportar PDF:', error);
-        
+    } 
+    catch (error) 
+    {        
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Error al generar el PDF' });
+            res.status(500).json({ error: 'Error al generar PDF' });
         }
     }
 };
+
 module.exports = { ventasDiarias, exportarPdf };

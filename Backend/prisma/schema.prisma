@@ -8,39 +8,40 @@ datasource db {
 }
 
 model Usuario {
-  id       Int     @id @default(autoincrement())
-  username String  @unique
-  password String
-  rol      String
-  ventas   Venta[]
+  id           Int     @id @default(autoincrement())
+  username     String  @unique
+  password     String
+  rol          String
+  ventas       Venta[]
+  refreshToken String?
 }
 
 model Producto {
   id             Int            @id @default(autoincrement())
   nombre         String
+  codigo         String?        @unique  // NUEVO: Para búsqueda rápida
   descripcion    String?
-  precioUnitario Float
+  precioUnitario Float?
   stock          Int
   detalles       DetalleVenta[]
 }
 
 model Venta {
-  id        Int            @id @default(autoincrement())
-  fecha     DateTime       @default(now())
-  total     Float
-  usuarioId Int
-  detalles  DetalleVenta[]
-  usuario   Usuario        @relation(fields: [usuarioId], references: [id])
+  id                Int            @id @default(autoincrement())
+  fecha             DateTime       @default(now())
+  total             Float
+  numeroTransaccion String?        @unique  
+  usuarioId         Int
+  detalles          DetalleVenta[]
+  usuario           Usuario        @relation(fields: [usuarioId], references: [id])
 }
-
 model DetalleVenta {
-  id         Int      @id @default(autoincrement())
-  cantidad   Int
-  precioUnitario Float
-  subtotal   Float
-  ventaId    Int
-  productoId Int
-  producto   Producto @relation(fields: [productoId], references: [id])
-  venta      Venta    @relation(fields: [ventaId], references: [id])
-  
+  id             Int      @id @default(autoincrement())
+  cantidad       Int
+  precioUnitario Float?
+  subtotal       Float
+  ventaId        Int
+  productoId     Int
+  producto       Producto @relation(fields: [productoId], references: [id])
+  venta          Venta    @relation(fields: [ventaId], references: [id])
 }
