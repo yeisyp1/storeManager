@@ -173,7 +173,7 @@ const Caja = () => {
           <div className="flex-1">
             <div className="bg-white p-4 rounded-lg shadow-md mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Buscar producto por ID
+               🔍 Buscar producto por ID
               </label>
               <div className="flex gap-2">
                 <input
@@ -252,7 +252,7 @@ const Caja = () => {
           <div className="w-96">
             <div className="sticky top-6">
               <div className="bg-white p-6 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-4 text-gray-800">Carrito</h2>
+                <h2 className="text-xl font-bold mb-4 text-gray-800">🛍️ Carrito</h2>
                 {venta.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">No hay productos agregados</p>
                 ) : (
@@ -334,16 +334,18 @@ const Caja = () => {
           <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
             <div className="text-center">
               <div className="mb-4 flex justify-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-4xl">
-                  ✅
-                </div>
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-4xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+               </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">¡Venta Exitosa!</h3>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">¡Venta exitosa!</h3>
               <p className="text-gray-600 mb-6">La venta se ha registrado correctamente</p>
               
               <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
                 <div className="mb-3">
-                  <p className="text-sm text-gray-500">Número de Transacción</p>
+                  <p className="text-sm text-gray-500">Número de transacción</p>
                   <p className="text-lg font-mono font-bold text-blue-600">
                     {ultimaVenta.numeroTransaccion}
                   </p>
@@ -355,7 +357,7 @@ const Caja = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Fecha y Hora</p>
+                  <p className="text-sm text-gray-500">Fecha y hora</p>
                   <p className="font-semibold text-gray-700">
                     {ultimaVenta.fecha.toLocaleString('es-CO')}
                   </p>
