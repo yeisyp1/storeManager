@@ -1,4 +1,4 @@
-StoreManager - Sistema de gestión de inventario y ventas
+StoreManager
 Manual de instalación y uso – storeManager 
 
 1. Introducción 
@@ -21,67 +21,114 @@ StoreManager es un sistema de gestión de inventario y ventas diseñado para neg
 • PostgreSQL (con configuración de Prisma) 
 • Git 
 
-3. Instalación 
-
-3.1 Clonar el repositorio 
-
-    git clone https://github.com/yeisyp1/storeManager.git 
-
-    cd storeManager 
-
-3.2 Backend (API) 
-
-    Ingresar a la carpeta Backend: 
-    cd Backend 
-
-    Instalar dependencias: 
-    npm install 
-
-    Crear y configurar en la raíz del Backend el archivo .env con el siguiente contenido:
-    DATABASE_URL="postgresql://usuario:contraseña@localhost:5432/storeManager"
-    JWT_SECRET="ContraseñaSecretaJWT" 
-    JWT_REFRESH_SECRET="ContraseñaRefreshSegura" 
 
 
+----------------------------------------------------------------------------------------
 
-    Ejecutar migraciones e ingresar datos iniciales: 
-    npx prisma migrate dev --name init 
-     
 
-    Iniciar el servidor: 
-    npm run dev 
-     
+1. Clonar el repositorio:
 
-El backend se ejecuta en: http://localhost:3000 
 
- 
+git clone https://github.com/yeisyp1/storeManager.git
+cd storeManager
+npm install
 
-3.3 Frontend 
+    Instalar dependencias del Backend:
 
-    Ingresar a la carpeta Frontend: 
-    cd storeManager/Frontend 
+cd Backend
+npm install
 
-    Instalar dependencias: 
-    npm install 
+    Instalar dependencias del Frontend:
 
-    Iniciar el servidor de desarrollo: 
-    npm run dev 
-     
-    El frontend estará en: http://localhost:5173 
+cd Frontend
+npm install
 
-4. Inicio de Sesión 
+Configuración de la base de datos PostgreSQL
 
-4.1 Usuarios de prueba 
+    Iniciar PostgreSQL:
+
+sudo systemctl start postgresql
+
+    Revisar que la base de datos esté disponible:
+
+psql -U postgres -c "\l"
+
+    Configurar la variable de entorno DATABASE_URL en Backend creando primero .env:
+Entonces en Backend/.env ingresar:
+DATABASE_URL="postgresql://usuario:contraseña@localhost:5432/inventario_ventas"
+
+Prisma
+
+    Generar el cliente de Prisma:
+
+cd Backend
+npx prisma generate
+npx prisma migrate dev
+
+    Abrir Prisma Studio para ver los datos:
+
+npx prisma studio
+
+2. Ejecutar la aplicación
+
+    Backend:
+
+cd Backend/src
+node index.js
+
+    Frontend (en otra terminal):
+
+cd storeManager/Frontend
+npm run dev   # Ejecuta el frontend con Vite
+
+Restaurar la base de datos desde Backend/DataBase
+
+inventario_ventas.backup
+
+    Crear la base de datos:
+sudo systemctl start postgresql
+CREATE DATABASE inventario_ventas;
+
+    Restaurar el backup:
+
+cd Backend
+pg_restore -U postgres -d inventario_ventas DataBase/inventario_ventas.backup
+npx prisma generate
+----------------------------------------------------------------------------------------------
+3.    Por si hay discordancia de colación en PostgreSQL:
+
+        Editar schema.prisma:
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = "postgresql://postgres@localhost:5432/shadow_db"
+}
+
+    En PostgreSQL:
+
+psql -U postgres -d postgres
+ALTER DATABASE template1 REFRESH COLLATION VERSION;
+CREATE DATABASE inventario_ventas;
+CREATE DATABASE shadow_db;
+
+    Luego ejecutar migraciones de Prisma:
+
+cd Backend
+npx prisma migrate dev
+npx prisma studio
+---------------------------------------------------------------------------------------------------
+4. Usuarios de prueba 
 
 | Usuario | Contraseña | Rol          |
 |---------|------------|--------------|
-| ricardo | admin123   | Administrador|
-| sebas   | ricardo123 | Cajero       |
-| luisa   | luisa123   | Cajero       |
-| elena   | elena123   | Cajero       |
+| Ricardo Admin | admin1234   | Administrador|
+| Sebas   | 1234 | CAJERO       |
+| Luisa   | 1234   | CAJERO       |
+| Elena   | 1234   | Administrador      |
  
 
-4.2 Proceso de inicio de sesión 
+4. Proceso de inicio de sesión 
 
 1. Ingresar a la URL del frontend. 
 2. Seleccionar la opción Iniciar sesión. 
